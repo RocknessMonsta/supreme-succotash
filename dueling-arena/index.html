@@ -2,19 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Taris Dueling Arena — Bendak's Challenge</title>
 <style>
   :root{
     --gold:#e8c558; --cyan:#5ee0ff; --red:#ff5e5e; --green:#7dff8a;
     --panel:rgba(8,14,24,.92); --edge:rgba(94,224,255,.35);
   }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  html,body{height:100%; background:#05080f; color:#cfe6f5;
-    font-family:'Segoe UI',system-ui,sans-serif; overflow:hidden;}
-  #wrap{position:relative; width:100vw; height:100vh;
-    display:flex; align-items:center; justify-content:center;}
-  #game{position:relative; width:min(100vw,177.7vh); aspect-ratio:16/9;}
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html{height:-webkit-fill-available;}
+  body{min-height:100vh; min-height:-webkit-fill-available; min-height:100dvh;
+    background:#05080f; color:#cfe6f5;
+    font-family:-apple-system,'Segoe UI',system-ui,sans-serif;
+    overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none;}
+  #wrap{position:fixed; inset:0; inset:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display:flex; align-items:center; justify-content:center; background:#05080f;}
+  #game{position:relative; width:min(100%,177.7vh); aspect-ratio:16/9;
+    max-height:100%;}
   canvas{position:absolute; inset:0; width:100%; height:100%; display:block;
     border-radius:6px;}
   /* ---------- HUD ---------- */
@@ -70,12 +77,13 @@
     border-top:1px solid var(--edge); border-bottom:1px solid var(--edge);
     padding:.3em 1.2em;}
   /* ---------- overlay screens ---------- */
-  #overlay{position:absolute; inset:0; z-index:10; display:flex;
-    align-items:center; justify-content:center;
+  #overlay{position:fixed; inset:0; z-index:10; display:flex;
+    align-items:flex-start; justify-content:center; overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
     background:radial-gradient(ellipse at 50% 30%, #0c1828 0%, #05080f 75%);}
   #overlay.hidden{display:none;}
-  .screen{width:min(92%,860px); max-height:94%; overflow-y:auto; text-align:center;
-    padding:2em 1.5em;}
+  .screen{width:min(92%,860px); text-align:center;
+    padding:2em 1.5em; padding-bottom:3em;}
   h1{font-size:clamp(26px,4.6vw,58px); letter-spacing:.12em; color:var(--gold);
     text-shadow:0 0 30px rgba(232,197,88,.35); font-weight:800;}
   h2{font-size:clamp(13px,1.6vw,20px); color:var(--cyan); letter-spacing:.3em;
@@ -116,9 +124,23 @@
   .hint{color:#5d7e95; font-size:clamp(9px,.95vw,12px); margin-top:1.4em;}
   kbd{background:#16283c; border:1px solid var(--edge); border-radius:4px;
     padding:1px 6px; font-family:inherit; color:var(--cyan);}
+  /* ------- mobile tweaks ------- */
+  #rotateHint{display:none; position:fixed; inset:0; z-index:99;
+    background:#05080f; color:var(--cyan); font-size:22px; font-weight:700;
+    align-items:center; justify-content:center; text-align:center;
+    flex-direction:column; gap:1em; padding:2em;}
+  @media (max-width:640px) and (orientation:portrait){
+    #rotateHint{display:flex;}
+  }
+  @media (max-width:900px){
+    .ab{width:clamp(44px,9vw,72px);}
+    .plate{padding:.4em .6em;}
+    h1{font-size:clamp(24px,7vw,52px);}
+  }
 </style>
 </head>
 <body>
+<div id="rotateHint"><span style="font-size:40px">↻</span>Rotate your phone<br><span style="font-size:14px;color:#8fb4cc">The arena needs landscape mode</span></div>
 <div id="wrap"><div id="game">
   <canvas id="arena" width="1280" height="720"></canvas>
 
