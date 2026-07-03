@@ -1155,6 +1155,11 @@ function aiTick(dt){
     S.grenade=true;
     throwGrenade(); return;
   }
+  if(!S.taunted && S.bhp < S.bhmax*.66){
+    S.taunted = true;
+    announce('', '', '"Quicker than the last one. They\'re never quick enough."', 2400);
+    addLog('<span class="la">Bendak almost sounds impressed.</span>');
+  }
   if(!S.enraged && S.bhp < S.bhmax*.33){
     S.enraged = true;
     announce('', 'BENDAK IS ENRAGED', '"No one survives me twice."', 2200);
