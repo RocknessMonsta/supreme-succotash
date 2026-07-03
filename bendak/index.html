@@ -219,7 +219,7 @@ kbd{background:#14263a;border:1px solid rgba(94,224,255,.3);border-radius:4px;
 <script type="module">
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
@@ -422,7 +422,7 @@ renderer.toneMappingExposure = 1.12;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x050a14, 0.016);
+scene.fog = new THREE.FogExp2(0x050a14, 0.013);
 
 const camera = new THREE.PerspectiveCamera(72, innerWidth/innerHeight, .05, 300);
 scene.add(camera);
@@ -437,7 +437,7 @@ function degradeQuality(){
 }
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .62, .38, .8);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .38, .4, 1.0);
 composer.addPass(bloom);
 const VigCA = {
   uniforms: {tDiffuse:{value:null}, vig:{value:.85}, ca:{value:.0}},
@@ -544,23 +544,29 @@ function buildArena(){
     clipBias: .003,
     textureWidth: Math.min(innerWidth, isTouch ? 768 : 1024),
     textureHeight: Math.min(innerHeight, isTouch ? 768 : 1024),
-    color: 0x1a3050,
+    color: 0x0d1826,
   });
   refl.rotation.x = -Math.PI/2; refl.position.y = .02;
   refl.visible = !LITE;
   reflectorObj = refl; root.add(refl);
 
   const fd = new THREE.Mesh(new THREE.CircleGeometry(10.1, 96), new THREE.MeshStandardMaterial({
-    map: floorTex, roughness:.4, metalness:.6, transparent:true, opacity:.55, color:0x1a2f48
+    map: floorTex, roughness:.8, metalness:.15, transparent:true, opacity:.72, color:0x24405e
   }));
   fd.rotation.x = -Math.PI/2; fd.position.y = .03; fd.receiveShadow = true; root.add(fd);
 
-  const step = cyl(10.5, 10.8, .15, 96, M.platform);
-  step.position.y = .07; root.add(step);
-  const rim = cyl(10.22, 10.22, .07, 128, M.edgeR);
+  // arena edge: open ring step + glow bands (open-ended — caps would roof the floor)
+  M.platform.roughness = .7; M.platform.metalness = .3; M.platform.side = THREE.DoubleSide;
+  const stepWall = new THREE.Mesh(new THREE.CylinderGeometry(10.8, 10.8, .15, 96, 1, true), M.platform);
+  stepWall.position.y = .075; stepWall.receiveShadow = true; root.add(stepWall);
+  const stepTop = new THREE.Mesh(new THREE.RingGeometry(10.05, 10.8, 96), M.platform);
+  stepTop.rotation.x = -Math.PI/2; stepTop.position.y = .15;
+  stepTop.receiveShadow = true; root.add(stepTop);
+  M.edgeR.side = THREE.DoubleSide; M.edgeB.side = THREE.DoubleSide;
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(10.22, 10.22, .07, 128, 1, true), M.edgeR);
   rim.position.y = .2; rim.castShadow = false; root.add(rim);
-  const rim2 = cyl(8.8, 8.8, .03, 128, M.edgeB);
-  rim2.position.y = .2; rim2.castShadow = false; root.add(rim2);
+  const rim2 = new THREE.Mesh(new THREE.CylinderGeometry(8.8, 8.8, .05, 128, 1, true), M.edgeB);
+  rim2.position.y = .06; rim2.castShadow = false; root.add(rim2);
 
   // Columns with glow strips
   for(let i = 0; i < 12; i++){
@@ -585,12 +591,27 @@ function buildArena(){
     root.add(ag);
   }
 
-  // Crowd risers — two concentric tiers
-  for(const [r, y] of [[13.6,.45],[15.6,1.25]]){
-    const t = new THREE.Mesh(new THREE.CylinderGeometry(r+1.1, r+1.1, y*2, 64, 1, false),
-      M.riser);
-    t.position.y = 0; t.receiveShadow = true; t.castShadow = false;
-    root.add(t);
+  // Crowd risers — two concentric ring tiers (open, NOT capped)
+  for(const [r, h] of [[13.6,.9],[15.6,2.5]]){
+    const wall = new THREE.Mesh(
+      new THREE.CylinderGeometry(r, r, h, 64, 1, true), M.riser);
+    wall.position.y = h/2; wall.material.side = THREE.DoubleSide;
+    wall.receiveShadow = true; wall.castShadow = false; root.add(wall);
+    const top = new THREE.Mesh(new THREE.RingGeometry(r, r+1.15, 64), M.riser);
+    top.rotation.x = -Math.PI/2; top.position.y = h;
+    top.receiveShadow = true; top.castShadow = false; root.add(top);
+    // glowing lip facing the ring
+    const lip = new THREE.Mesh(
+      new THREE.CylinderGeometry(r+.01, r+.01, .06, 64, 1, true), M.edgeB);
+    lip.position.y = h - .03; lip.material.side = THREE.DoubleSide;
+    lip.castShadow = false; root.add(lip);
+  }
+  // gallery wash lights so the stands read
+  for(let i = 0; i < 6; i++){
+    const a = i/6 * TAU + .26;
+    const gl = new THREE.PointLight(0x3b6dae, 14, 12);
+    gl.position.set(Math.sin(a)*14.6, 4.2, Math.cos(a)*14.6);
+    root.add(gl);
   }
 
   buildCityscape(root);
@@ -640,23 +661,23 @@ function buildHoloboards(root){
 
 // ── Lighting ────────────────────────────────────────────────────
 function buildLights(){
-  scene.add(new THREE.AmbientLight(0x2a3d55, 1.6));
-  scene.add(new THREE.HemisphereLight(0x35507a, 0x0a0f18, .8));
-  const key = new THREE.SpotLight(0xfff0e0, 1600, 45, Math.PI/4.2, .42, 1.8);
+  scene.add(new THREE.AmbientLight(0x2a3d55, .75));
+  scene.add(new THREE.HemisphereLight(0x35507a, 0x0a0f18, .45));
+  const key = new THREE.SpotLight(0xeef2ff, 150, 45, Math.PI/4.2, .42, 1.8);
   key.position.set(0, 15, 0); key.target.position.set(0, 0, 0);
   key.castShadow = true; key.shadow.mapSize.set(2048, 2048);
   key.shadow.camera.near = .5; key.shadow.camera.far = 35; key.shadow.bias = -.0004;
   scene.add(key); scene.add(key.target);
-  const rim = new THREE.SpotLight(0xff2200, 320, 30, Math.PI/4, .5, 1.9);
-  rim.position.set(0, 6, -11); rim.target.position.set(0, 1.5, 0);
+  const rim = new THREE.SpotLight(0xff2200, 14, 16, Math.PI/8, .55, 1.9);
+  rim.position.set(0, 6, -11); rim.target.position.set(0, 2.4, 0);
   scene.add(rim); scene.add(rim.target);
-  const fill1 = new THREE.SpotLight(0x3366aa, 260, 30, Math.PI/5, .6, 2);
+  const fill1 = new THREE.SpotLight(0x3366aa, 30, 30, Math.PI/5, .6, 2);
   fill1.position.set(-8, 7, 6); fill1.target.position.set(0, 1, 0);
   scene.add(fill1); scene.add(fill1.target);
-  const fill2 = new THREE.SpotLight(0x3366aa, 260, 30, Math.PI/5, .6, 2);
+  const fill2 = new THREE.SpotLight(0x3366aa, 30, 30, Math.PI/5, .6, 2);
   fill2.position.set(8, 7, 6); fill2.target.position.set(0, 1, 0);
   scene.add(fill2); scene.add(fill2.target);
-  const back = new THREE.PointLight(0x0044cc, 60, 14);
+  const back = new THREE.PointLight(0x0044cc, 8, 14);
   back.position.set(0, 3, 10); scene.add(back);
 }
 
@@ -670,15 +691,11 @@ function setLoad(pct, txt){
   if(txt) document.getElementById('loadtxt').textContent = txt;
 }
 async function loadAssets(){
-  const rgbe = new RGBELoader();
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  pmrem.compileEquirectangularShader();
   setLoad(5, 'CALIBRATING LIGHT FIELD...');
   try {
-    const hdr = await rgbe.loadAsync('./assets/moonless_golf_1k.hdr');
-    const env = pmrem.fromEquirectangular(hdr).texture;
-    scene.environment = env;
-    hdr.dispose(); pmrem.dispose();
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), .04).texture;
+    pmrem.dispose();
     envReady = true;
   } catch(e){ /* env is a bonus; lights carry the scene */ }
   setLoad(30, 'SUMMONING BENDAK...');
@@ -761,6 +778,7 @@ function playOneShot(ch, name, backTo, fade = .1){
 // ── Bendak ──────────────────────────────────────────────────────
 let bendak = null;         // {obj, mixer, actions, cur}
 const bendakPos = new THREE.Vector3(0, 0, -4.6);
+window.__bendakPos = bendakPos; // test hook
 let bendakMove = 'Idle';
 function buildBendak(){
   bendak = makeCharacter({
@@ -782,7 +800,7 @@ function buildBendak(){
   // menace: red glow at the head
   const head = bendak.obj.getObjectByName('Head');
   if(head){
-    const hl = new THREE.PointLight(0xff3018, 2.2, 2.2);
+    const hl = new THREE.PointLight(0xff3018, .5, 1.6);
     hl.position.set(0, .12, .12);
     head.add(hl);
     bendak.headLight = hl;
@@ -862,7 +880,7 @@ function buildViewmodel(){
   weaponGroup.rotation.set(0, .07, .015);
 
   // hand-built blaster, styled to match the Quaternius toon look
-  const gunMet  = new THREE.MeshStandardMaterial({color:0x2c4258, roughness:.35, metalness:.85});
+  const gunMet  = new THREE.MeshStandardMaterial({color:0x5a7590, roughness:.35, metalness:.8});
   const gunDark = new THREE.MeshStandardMaterial({color:0x0e1b26, roughness:.5,  metalness:.7});
   const gunGold = new THREE.MeshStandardMaterial({color:0xc9971f, roughness:.3,  metalness:.85});
   const gunGlow = new THREE.MeshStandardMaterial({color:0xff5030, emissive:new THREE.Color(0xff3000), emissiveIntensity:3, roughness:.1, metalness:.8});
@@ -887,6 +905,10 @@ function buildViewmodel(){
   muzzleFlashLight = new THREE.PointLight(0xff8040, 0, 4);
   muzzleFlashLight.position.set(0, .01, -.48);
   weaponGroup.add(muzzleFlashLight);
+  // constant fill so the viewmodel never falls into shadow
+  const vmFill = new THREE.PointLight(0xcfe0ff, .28, 1.3);
+  vmFill.position.set(-.15, .25, .1);
+  weaponGroup.add(vmFill);
 
   const flashTex = makeTex(128, (c) => {
     const g = c.createRadialGradient(64,64,2,64,64,60);
@@ -1344,6 +1366,30 @@ function updateCountdown(dt){
   if(remain <= 0) startFightPhase();
 }
 window.__go = () => startFightPhase();  // test hook
+window.__D = {bloom, get refl(){return reflectorObj}, scene, camera, renderer, vigPass}; // test hook
+window.__probeLights = () => {           // test hook: all effective lights
+  const out = [];
+  scene.traverse(o => {
+    if(o.isLight){
+      let vis = true, c = o;
+      while(c){ if(!c.visible) vis = false; c = c.parent; }
+      const p = new THREE.Vector3(); o.getWorldPosition(p);
+      out.push(`${o.type} i:${o.intensity} d:${o.distance??'-'} vis:${vis} pos:${p.x.toFixed(1)},${p.y.toFixed(1)},${p.z.toFixed(1)} col:#${o.color.getHexString()}`);
+    }
+  });
+  return out.join('\n');
+};
+window.__probeSky = (px = 0, py = .55) => {   // test hook: what renders at a pixel?
+  const rc = new THREE.Raycaster();
+  rc.setFromCamera(new THREE.Vector2(px, py), camera);
+  const hits = rc.intersectObjects(scene.children, true).slice(0, 4);
+  return hits.map(h => {
+    const o = h.object; const p = new THREE.Vector3(); o.getWorldPosition(p);
+    const chain = []; let cur = o; while(cur){ chain.push(cur.name||cur.type); cur = cur.parent; }
+    const s = new THREE.Vector3(); o.getWorldScale(s);
+    return `d:${h.distance.toFixed(1)} geo:${o.geometry?.type} mat:${o.material?.name||o.material?.type} vis:${o.visible} pos:${p.x.toFixed(1)},${p.y.toFixed(1)},${p.z.toFixed(1)} scale:${s.x.toFixed(2)} chain:${chain.join('<')}`;
+  }).join('\n') || 'nothing';
+};
 function startFightPhase(){
   S.phase = 'fight';
   S.stats.t0 = performance.now();
@@ -1395,7 +1441,7 @@ function updateBendak(dt, t){
     const look = playerPos.clone(); look.y = bendak.obj.position.y;
     bendak.obj.lookAt(look);
   }
-  if(bendak.headLight) bendak.headLight.intensity = (S.enraged?5:2.2) + Math.sin(t*4)*.6;
+  if(bendak.headLight) bendak.headLight.intensity = (S.enraged?1.4:.5) + Math.sin(t*4)*.15;
   bendak.mixer.update(mixDt);
 
   // shield bubble
@@ -1653,6 +1699,14 @@ let fpsAcc = 0, fpsN = 0;
   buildBendak();
   buildCrowdActors();
   buildViewmodel();
+  // keep IBL a supporting player, never the key light
+  scene.traverse(o => {
+    if(o.material){
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
+        if('envMapIntensity' in m) m.envMapIntensity = .35;
+      });
+    }
+  });
   // title-screen camera: wide establishing shot
   camera.position.set(0, 3.2, 12.5);
   camera.lookAt(0, 1.2, 0);
