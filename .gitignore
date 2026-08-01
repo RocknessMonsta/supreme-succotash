@@ -1,0 +1,27 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Build output & dependency dirs (stack-specific entries added in Phase 1)
+dist/
+build/
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+target/
