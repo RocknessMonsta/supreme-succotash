@@ -1,8 +1,10 @@
 # Project Refactor Plan — supreme-succotash
 
-**Date:** 2026-08-01 (rev. 2 — updated after discovering code on side branches)
+**Date:** 2026-08-01 (rev. 3 — refactor executed on this branch)
 **Branch:** `claude/project-refactor-plan-r4fj1g`
-**Status:** Ready for review
+**Status:** Executed — PR #1 now contains the consolidation; merging it puts
+ErrandBoy on the default branch. Remaining items (game placement, branch
+cleanup, default-branch rename) listed in §3.
 
 ---
 

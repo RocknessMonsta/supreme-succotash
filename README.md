@@ -1,37 +1,26 @@
-# supreme-succotash
+# ErrandBoy — Investor Demo
 
-**Status:** Bootstrapping — Phase 1 in progress. See [REFACTOR_PLAN.md](REFACTOR_PLAN.md).
+Returns, handled. Two photos, one flat price, proof at every handoff.
 
-## What is this?
+## Run it
 
-This repository holds the **ErrandBoy investor demo** (React 18 + Vite —
-"Returns, handled") and a Three.js mini-game, currently stranded on unmerged
-side branches (`claude/build-out-y26nsn` and
-`claude/kotor-porting-feasibility-b82oop`). The refactor plan consolidates
-ErrandBoy onto a real `main` branch.
-
-## ⚡ Decisions needed (see REFACTOR_PLAN.md §3)
-
-1. Confirm ErrandBoy becomes `main`.
-2. Game: separate repo (recommended) or `games/` folder here?
-3. Anything in-flight on the side branches to preserve first?
-
-## Project layout
-
-```
-supreme-succotash/
-├── README.md          # This file
-├── REFACTOR_PLAN.md   # Phased bootstrap/refactor plan
-├── CLAUDE.md          # AI assistant guide
-└── docs/
-    └── DECISIONS.md   # Running log of project decisions
+```bash
+npm install
+npm run dev
 ```
 
-`src/` and `tests/` are created in the stack-specific part of Phase 1.
+Open the printed localhost URL. Use the segmented control to switch personas; the rail shows the spoken pitch note for each screen. "Reset demo" returns everything to the opening state before a live pitch.
 
-## Workflow
+## Working on it with Claude Code
 
-- Branch from the default branch; small, reviewable commits.
-- Commit format: `type: description` (`feat`, `fix`, `docs`, `refactor`,
-  `test`, `chore`).
-- Every feature lands with tests once the stack exists.
+Open this folder and just describe the change — `CLAUDE.md` carries the design constitution (banned patterns, palette, motion budget) and the pitch-content rules, so generated UI stays on-brand.
+
+## Repository status
+
+This branch consolidates the repository: ErrandBoy (previously stranded on
+`claude/build-out-y26nsn`) is now at the root alongside the project docs.
+See [REFACTOR_PLAN.md](REFACTOR_PLAN.md) for the full audit and remaining
+steps, and [docs/DECISIONS.md](docs/DECISIONS.md) for open decisions — notably
+where the Bendak/dueling-arena game on
+`claude/kotor-porting-feasibility-b82oop` should live (separate repo
+recommended; that branch is untouched).
