@@ -4,13 +4,13 @@ Running log of project decisions. Newest first.
 
 | Date | Decision | Rationale | Decided by |
 |------|----------|-----------|------------|
-| 2026-08-01 | Stack-neutral foundation committed before stack choice | Keep momentum ("get this going asap") while product/stack questions are answered; nothing here needs redoing regardless of stack | Claude (per owner's directive) |
-| 2026-08-01 | Bootstrap instead of refactor | Repository audit found no source code — nothing to refactor; see REFACTOR_PLAN.md §1 | Claude (pending owner confirmation) |
+| 2026-08-01 | Refactor = repository surgery, not code rewrite | Code found intact on side branches (ErrandBoy demo, Bendak game); the broken part is branch structure — default branch is empty; see REFACTOR_PLAN.md §1–2 | Claude (pending owner confirmation) |
+| 2026-08-01 | Stack-neutral foundation committed before restructure | Keep momentum while owner reviews the plan | Claude (per owner's directive) |
 
 ## Open decisions (owner input required)
 
-1. Location of any existing code that belongs in this repo.
-2. Project purpose and target users.
-3. Language/framework stack.
+1. Confirm ErrandBoy (`claude/build-out-y26nsn`) becomes `main`.
+2. Bendak/dueling-arena game: separate repo (recommended) or `games/` here?
+3. Any in-flight work on side branches to preserve before restructuring.
 
 Record answers here when they land.

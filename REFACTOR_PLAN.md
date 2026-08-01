@@ -1,96 +1,104 @@
 # Project Refactor Plan — supreme-succotash
 
-**Date:** 2026-08-01
+**Date:** 2026-08-01 (rev. 2 — updated after discovering code on side branches)
 **Branch:** `claude/project-refactor-plan-r4fj1g`
 **Status:** Ready for review
 
 ---
 
-## 1. Where the Project Stands Today (Honest Audit)
+## 1. The Real Problem (root cause found)
 
-Before planning a refactor, I audited the repository. Here is the full inventory:
+Your code exists — it was never lost. **It's stranded on side branches that were
+never merged**, while the repository's default branch contains only a `CLAUDE.md`
+template. Anyone (human or AI) landing on the repo sees an empty project. That is
+why every previous "refactor this project" attempt went nowhere.
 
-| Item | Status |
-|------|--------|
-| Source code | **None** — the repository contains no application code |
-| `CLAUDE.md` | Present — an AI-assistant guide template, mostly placeholder sections marked "TBD" |
-| Tests | None |
-| Build config / dependencies | None (no `package.json`, `requirements.txt`, etc.) |
-| README | None |
-| CI/CD | None |
+### Full branch audit
 
-**Key finding: there is currently nothing to refactor.** The repository is an empty
-shell with a documentation template. This is important to say plainly, because it
-changes what "refactor" means here — the real task is to **bootstrap the project
-properly from day one** so it never *needs* a painful refactor later.
+| Branch | Contents | State |
+|--------|----------|-------|
+| `claude/claude-md-mk2xq84fd0d1g70k-H6sZH` | **Default branch.** Only `CLAUDE.md` (empty template) | The problem |
+| `claude/build-out-y26nsn` | **ErrandBoy investor demo** — React 18 + Vite app, v2.0.0. Customer/Runner/Founder personas, ~20 screens, design system, pitch rail | Complete, unmerged |
+| `claude/kotor-porting-feasibility-b82oop` | **Taris Dueling Arena / Bendak fight** — Three.js 3D mini-game with vendored three.js, GLTF character, post-processing | Complete, unmerged |
+| `claude/project-refactor-plan-r4fj1g` | This plan + stack-neutral foundation files | Under review |
 
-If you believe there should be code in this repository, it may live somewhere else
-(another repo, a local folder that was never pushed, or a different branch on a
-different account). Step 1 below covers resolving that.
+### ErrandBoy snapshot (the apparent flagship)
 
----
+- "Returns, handled. Two photos, one flat price, proof at every handoff."
+- React 18 + Vite, clean dependency footprint (react + react-dom only).
+- Organized: `src/screens/{customer,runner,founder}/`, shared `ui.jsx`,
+  `tokens.js` design tokens, `data.js`, demo-reset flow for live pitches.
+- Has its own README and a CLAUDE.md "design constitution."
 
-## 2. Decisions Needed From You (blocking — answer these first)
+### The game (separate concern)
 
-These are the only things I cannot decide alone. Everything after this section
-proceeds without you once these are answered.
-
-1. **Where is the code?** Is there existing code that belongs in this repo
-   (local machine, another repo)? If yes, push it or tell me where it is and
-   I'll pull it in. If no, confirm we're starting fresh.
-2. **What is the project?** One or two sentences: what should this software do,
-   and who uses it?
-3. **Stack preference?** If you have one (Python, JavaScript/TypeScript, etc.),
-   say so. If not, I'll choose based on the answer to #2 and justify the choice.
+The Bendak arena is a self-contained static app (`bendak/`, `dueling-arena/`)
+with ~25 vendored three.js files. It shares nothing with ErrandBoy — different
+audience, different stack, no common code.
 
 ---
 
-## 3. The Plan (phased, each phase ends in a pushed, reviewable state)
+## 2. Recommended Refactor
 
-### Phase 0 — Resolve the decisions above
-- You answer the three questions in Section 2 (a couple of sentences is enough).
-- If existing code surfaces, I audit it and produce a *real* refactor plan for it
-  as an addendum to this document.
+The refactor here is **repository surgery, not code rewriting**. The ErrandBoy
+code itself is in good shape; the repo structure is what's broken.
 
-### Phase 1 — Foundation (first working day after Phase 0)
-- Add a `README.md` describing the project's purpose.
-- Scaffold the project structure: `src/`, `tests/`, `docs/`, `scripts/`.
-- Add dependency manifest, `.gitignore`, formatter + linter config.
-- Rewrite `CLAUDE.md`: delete every "TBD" placeholder and fill it with the real
-  stack, real commands, and real conventions (it's currently ~80% empty template).
+### Step 1 — Give the repo a real `main`
+Create `main` from the ErrandBoy branch (`claude/build-out-y26nsn`) and make it
+the default branch on GitHub. ErrandBoy lives at the repo root: clone → `npm
+install` → `npm run dev` just works.
 
-### Phase 2 — Core implementation
-- Build the first vertical slice of the actual feature set from Section 2.
-- Every piece lands with unit tests from the start — no "add tests later."
+### Step 2 — Separate the game
+Recommended: move the Bendak/dueling-arena game to its own repository (it's
+fully self-contained), or — if you prefer one repo — keep it under `games/` on
+`main`. My recommendation is a separate repo: the vendored three.js bloats
+diffs and the two projects will never share code or releases.
 
-### Phase 3 — Quality gates
-- CI via GitHub Actions: lint + test on every push.
-- Branch protection recommendation for `main` once CI is green.
+### Step 3 — Merge the good parts of this branch
+Fold this plan's foundation files (`.editorconfig`, decision log, updated
+README/CLAUDE.md) into `main`, with `CLAUDE.md` rewritten to describe the real
+stack (React 18/Vite, run commands, screen architecture, design constitution)
+instead of "TBD" placeholders.
 
-### Phase 4 — Iterate
-- Feature work proceeds in small PRs, each reviewable in minutes, not hours.
+### Step 4 — Retire the stale branches
+After merging: delete `claude/claude-md-*` as default, keep branches only for
+in-flight work. Add branch protection on `main`.
 
----
-
-## 4. How We Communicate in Near-Real-Time
-
-You asked how to respond quickly and keep this moving:
-
-- **Fastest: reply in the Claude Code session** (claude.ai/code on web or the
-  mobile app). The session runs in the cloud — your computer locking or sleeping
-  does not stop it. Messages you send arrive while I'm working.
-- **GitHub**: comments on commits/PRs in this repo reach me when I'm subscribed
-  to the PR. Once a PR exists, I can watch it and respond to every comment and
-  CI failure automatically.
-- **Email**: a draft summarizing this plan is in your Gmail drafts — you can
-  send/forward it (e.g., to Monica) for a second pair of eyes.
-- **SMS**: I don't have a text-messaging capability, so I can't text
-  336.391.8120 directly. Push notifications through the Claude app are the
-  closest equivalent, and I've sent one for this plan.
+### Step 5 (optional, after the above) — Code-level polish on ErrandBoy
+Only if you want it: `App.jsx` and `ui.jsx` are the largest files and could be
+split; add ESLint/Prettier; add a GitHub Actions build check. None of this
+blocks the demo working today.
 
 ---
 
-## 5. What Happens Next
+## 3. Decisions Needed From You (much smaller now)
 
-Reply (in the session, or a GitHub comment) with answers to Section 2's three
-questions. I'll start Phase 1 the same day and push it to this branch for review.
+1. **Confirm ErrandBoy is the primary project** for this repo (its `main`).
+2. **Game placement:** separate repo (recommended) or `games/` folder here?
+3. **Anything in-flight** on either side branch I should preserve before
+   restructuring?
+
+Default if I don't hear otherwise: I proceed with the recommendations —
+ErrandBoy to `main`, game preserved on its branch untouched pending your call.
+
+---
+
+## 4. How We Communicate in Real Time (working setup)
+
+- **This Claude Code session** (claude.ai/code, web or phone): messages reach
+  me live, even mid-task — already proven both directions today. The session
+  runs in the cloud; your machine locking doesn't stop it.
+- **The review PR for this plan**: comment from the GitHub app on your phone —
+  I'm subscribed, comments wake me immediately.
+- **Push notifications** to your phone via the Claude app when work is ready.
+- **SMS**: not possible from this environment today (no send-capable
+  connector). One-time fix on your side: connect Twilio or Quo at claude.ai →
+  Settings → Connectors, then I can text 336.391.8120 / 845.702.2154 directly.
+- Every 60 minutes I automatically check for your replies and branch activity.
+
+---
+
+## 5. Next Step
+
+Reply here or comment on the PR. Say "go with your recommendations" and Steps
+1–4 happen the same day.

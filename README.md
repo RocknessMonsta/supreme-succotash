@@ -4,20 +4,17 @@
 
 ## What is this?
 
-The project's purpose is being defined. The repository previously contained no
-source code; it is now being set up with a solid foundation so development can
-start immediately once the product decisions land.
+This repository holds the **ErrandBoy investor demo** (React 18 + Vite —
+"Returns, handled") and a Three.js mini-game, currently stranded on unmerged
+side branches (`claude/build-out-y26nsn` and
+`claude/kotor-porting-feasibility-b82oop`). The refactor plan consolidates
+ErrandBoy onto a real `main` branch.
 
-## ⚡ Decisions needed (blocking stack-specific work)
+## ⚡ Decisions needed (see REFACTOR_PLAN.md §3)
 
-Answer in the Claude Code session or a comment on the
-`claude/project-refactor-plan-r4fj1g` branch — one sentence each:
-
-1. **Existing code?** Is there code that belongs here (local machine, another
-   repo)? If yes, where?
-2. **Purpose?** What should this software do, and for whom?
-3. **Stack?** Any language/framework preference? (If none, one will be chosen
-   and justified based on #2.)
+1. Confirm ErrandBoy becomes `main`.
+2. Game: separate repo (recommended) or `games/` folder here?
+3. Anything in-flight on the side branches to preserve first?
 
 ## Project layout
 
