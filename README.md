@@ -17,10 +17,14 @@ Open this folder and just describe the change — `CLAUDE.md` carries the design
 
 ## Repository status
 
-This branch consolidates the repository: ErrandBoy (previously stranded on
-`claude/build-out-y26nsn`) is now at the root alongside the project docs.
-See [REFACTOR_PLAN.md](REFACTOR_PLAN.md) for the full audit and remaining
-steps, and [docs/DECISIONS.md](docs/DECISIONS.md) for open decisions — notably
-where the Bendak/dueling-arena game on
-`claude/kotor-porting-feasibility-b82oop` should live (separate repo
-recommended; that branch is untouched).
+Everything now lives in this one repository — nothing stranded on side
+branches anymore:
+
+- **Root:** ErrandBoy investor demo (from `claude/build-out-y26nsn`).
+- **`games/`:** the Bendak / Taris Dueling Arena Three.js games (from
+  `claude/kotor-porting-feasibility-b82oop`) — open
+  `games/bendak/index.html` or `games/dueling-arena/index.html` directly in
+  a browser.
+
+See [REFACTOR_PLAN.md](REFACTOR_PLAN.md) for the audit and
+[docs/DECISIONS.md](docs/DECISIONS.md) for the decision log.
