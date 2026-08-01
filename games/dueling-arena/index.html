@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Taris Dueling Arena — Bendak's Challenge</title>
+<style>
+  :root{
+    --gold:#e8c558; --cyan:#5ee0ff; --red:#ff5e5e; --green:#7dff8a;
+    --panel:rgba(8,14,24,.92); --edge:rgba(94,224,255,.35);
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  html{height:-webkit-fill-available;}
+  body{min-height:100vh; min-height:-webkit-fill-available; min-height:100dvh;
+    background:#05080f; color:#cfe6f5;
+    font-family:-apple-system,'Segoe UI',system-ui,sans-serif;
+    overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none;}
+  #wrap{position:fixed; inset:0; inset:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display:flex; align-items:center; justify-content:center; background:#05080f;}
+  #game{position:relative; width:min(100%,177.7vh); aspect-ratio:16/9;
+    max-height:100%;}
+  canvas{position:absolute; inset:0; width:100%; height:100%; display:block;
+    border-radius:6px;}
+  /* ---------- HUD ---------- */
+  .plate{position:absolute; top:2.5%; width:34%; padding:.6em .9em;
+    background:var(--panel); border:1px solid var(--edge); border-radius:8px;
+    backdrop-filter:blur(2px); z-index:5;}
+  #plateL{left:2%;} #plateR{right:2%; text-align:right;}
+  .pname{font-weight:700; letter-spacing:.06em; font-size:clamp(11px,1.4vw,18px);}
+  .ptag{font-size:clamp(8px,.9vw,12px); color:#8fb4cc; font-style:italic;}
+  .barbox{height:10px; margin-top:6px; background:#11202e; border-radius:5px;
+    overflow:hidden; position:relative;}
+  .hp{height:100%; background:linear-gradient(90deg,#ff5e5e,#ff9a5e);
+    transition:width .25s; border-radius:5px;}
+  .hp.ok{background:linear-gradient(90deg,#3fd96b,#9aff7d);}
+  .shield{position:absolute; left:0; top:0; height:100%;
+    background:linear-gradient(90deg,rgba(94,224,255,.85),rgba(94,224,255,.4));
+    border-radius:5px;}
+  .hpnum{font-size:clamp(8px,.9vw,12px); margin-top:3px; color:#9fc6dd;}
+  /* ---------- ability bar ---------- */
+  #abilities{position:absolute; bottom:2.5%; left:50%; transform:translateX(-50%);
+    display:flex; gap:.6em; z-index:5;}
+  .ab{position:relative; width:clamp(48px,6.4vw,84px); aspect-ratio:1;
+    background:var(--panel); border:1px solid var(--edge); border-radius:10px;
+    color:#cfe6f5; cursor:pointer; overflow:hidden; user-select:none;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition:transform .08s, border-color .15s;}
+  .ab:hover{border-color:var(--gold);}
+  .ab:active{transform:scale(.93);}
+  .ab .ico{font-size:clamp(16px,2.2vw,28px); line-height:1;}
+  .ab .lbl{font-size:clamp(7px,.75vw,10px); margin-top:3px; letter-spacing:.04em;}
+  .ab .key{position:absolute; top:3px; left:6px; font-size:clamp(8px,.8vw,11px);
+    color:var(--gold); font-weight:700;}
+  .ab .cnt{position:absolute; top:3px; right:6px; font-size:clamp(8px,.8vw,11px);
+    color:var(--cyan); font-weight:700;}
+  .ab .cd{position:absolute; left:0; bottom:0; width:100%; height:0;
+    background:rgba(5,10,18,.78); pointer-events:none;}
+  .ab.disabled{opacity:.35; cursor:default;}
+  /* ---------- combat log ---------- */
+  #log{position:absolute; bottom:2.5%; left:2%; width:26%; max-height:24%;
+    overflow:hidden; display:flex; flex-direction:column-reverse;
+    font-size:clamp(8px,.95vw,13px); z-index:4; pointer-events:none;}
+  #log div{padding:2px 0; text-shadow:0 1px 3px #000;
+    animation:logfade 6s forwards;}
+  @keyframes logfade{0%{opacity:1}70%{opacity:.85}100%{opacity:0}}
+  .l-hit{color:#ffd27d;} .l-miss{color:#7d9bb0;} .l-crit{color:#ff7d7d;font-weight:700;}
+  .l-sys{color:var(--cyan);} .l-ann{color:var(--gold);font-style:italic;}
+  /* ---------- pause banner ---------- */
+  #pauseBanner{position:absolute; inset:0; display:none; align-items:center;
+    justify-content:center; z-index:6; pointer-events:none;
+    background:rgba(4,8,14,.45);}
+  #pauseBanner span{font-size:clamp(20px,3.4vw,46px); font-weight:800;
+    letter-spacing:.35em; color:var(--cyan); text-shadow:0 0 24px rgba(94,224,255,.6);
+    border-top:1px solid var(--edge); border-bottom:1px solid var(--edge);
+    padding:.3em 1.2em;}
+  /* ---------- overlay screens ---------- */
+  #overlay{position:fixed; inset:0; z-index:10; display:flex;
+    align-items:flex-start; justify-content:center; overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    background:radial-gradient(ellipse at 50% 30%, #0c1828 0%, #05080f 75%);}
+  #overlay.hidden{display:none;}
+  .screen{width:min(92%,860px); text-align:center;
+    padding:2em 1.5em; padding-bottom:3em;}
+  h1{font-size:clamp(26px,4.6vw,58px); letter-spacing:.12em; color:var(--gold);
+    text-shadow:0 0 30px rgba(232,197,88,.35); font-weight:800;}
+  h2{font-size:clamp(13px,1.6vw,20px); color:var(--cyan); letter-spacing:.3em;
+    margin-bottom:.4em; font-weight:600;}
+  .sub{color:#8fb4cc; font-size:clamp(11px,1.2vw,15px); margin:1em auto 1.6em;
+    max-width:560px; line-height:1.55;}
+  .btn{display:inline-block; margin:.4em; padding:.7em 2.2em;
+    background:linear-gradient(180deg,#16283c,#0c1726); color:var(--gold);
+    border:1px solid var(--edge); border-radius:8px; font-size:clamp(12px,1.3vw,17px);
+    letter-spacing:.12em; cursor:pointer; font-weight:700;
+    transition:border-color .15s, transform .08s;}
+  .btn:hover{border-color:var(--gold);} .btn:active{transform:scale(.96);}
+  .btn.danger{color:var(--red); border-color:rgba(255,94,94,.4);}
+  .btn.danger:hover{border-color:var(--red);}
+  .btn:disabled{opacity:.35; cursor:default;}
+  /* ladder */
+  .ladder{display:flex; flex-direction:column; gap:.5em; margin:1.2em 0;}
+  .rung{display:flex; align-items:center; gap:1em; text-align:left;
+    background:var(--panel); border:1px solid var(--edge); border-radius:10px;
+    padding:.7em 1em;}
+  .rung.done{opacity:.5;} .rung.locked{opacity:.3;}
+  .rung.death{border-color:rgba(255,94,94,.55);
+    box-shadow:0 0 18px rgba(255,94,94,.15) inset;}
+  .face{width:44px; height:44px; border-radius:50%; flex:none;
+    border:2px solid var(--edge);}
+  .rinfo{flex:1;}
+  .rname{font-weight:700; font-size:clamp(12px,1.3vw,17px);}
+  .rtag{font-size:clamp(9px,1vw,12px); color:#8fb4cc; font-style:italic;}
+  .rpay{color:var(--gold); font-size:clamp(10px,1.1vw,14px); white-space:nowrap;}
+  /* shop */
+  .shop{display:flex; flex-wrap:wrap; gap:.5em; justify-content:center; margin:1em 0;}
+  .shopitem{background:var(--panel); border:1px solid var(--edge); border-radius:10px;
+    padding:.6em .9em; font-size:clamp(10px,1.05vw,13px); min-width:150px;}
+  .shopitem b{color:var(--gold);}
+  .credits{color:var(--gold); font-size:clamp(13px,1.5vw,19px); font-weight:700;
+    letter-spacing:.08em;}
+  .stats{color:#9fc6dd; font-size:clamp(10px,1.05vw,13px); margin:.5em 0 1em;}
+  .hint{color:#5d7e95; font-size:clamp(9px,.95vw,12px); margin-top:1.4em;}
+  kbd{background:#16283c; border:1px solid var(--edge); border-radius:4px;
+    padding:1px 6px; font-family:inherit; color:var(--cyan);}
+  /* ------- mobile tweaks ------- */
+  #rotateHint{display:none; position:fixed; inset:0; z-index:99;
+    background:#05080f; color:var(--cyan); font-size:22px; font-weight:700;
+    align-items:center; justify-content:center; text-align:center;
+    flex-direction:column; gap:1em; padding:2em;}
+  @media (max-width:640px) and (orientation:portrait){
+    #rotateHint{display:flex;}
+  }
+  @media (max-width:900px){
+    .ab{width:clamp(44px,9vw,72px);}
+    .plate{padding:.4em .6em;}
+    h1{font-size:clamp(24px,7vw,52px);}
+  }
+</style>
+</head>
+<body>
+<div id="rotateHint"><span style="font-size:40px">↻</span>Rotate your phone<br><span style="font-size:14px;color:#8fb4cc">The arena needs landscape mode</span></div>
+<div id="wrap"><div id="game">
+  <canvas id="arena" width="1280" height="720"></canvas>
+
+  <div class="plate" id="plateL">
+    <div class="pname" id="nameL">—</div><div class="ptag" id="tagL"></div>
+    <div class="barbox"><div class="hp ok" id="hpL"></div><div class="shield" id="shL"></div></div>
+    <div class="hpnum" id="numL"></div>
+  </div>
+  <div class="plate" id="plateR">
+    <div class="pname" id="nameR">—</div><div class="ptag" id="tagR"></div>
+    <div class="barbox"><div class="hp" id="hpR"></div><div class="shield" id="shR"></div></div>
+    <div class="hpnum" id="numR"></div>
+  </div>
+
+  <div id="abilities"></div>
+  <div id="log"></div>
+  <div id="pauseBanner"><span>TACTICAL PAUSE</span></div>
+
+  <div id="overlay"><div class="screen" id="screen"></div></div>
+</div></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   TARIS DUELING ARENA — Bendak's Challenge
+   A modernized reimagining of KOTOR's Taris duel ring as a fan homage.
+   Real-time cooldown combat, authentic d20 rolls under the hood,
+   tactical pause, persistent upgrades. Single file, zero assets.
+   ===================================================================== */
+
+// ---------- tiny utils ----------
+const $ = id => document.getElementById(id);
+const rnd = (a,b) => a + Math.random()*(b-a);
+const irnd = (a,b) => Math.floor(rnd(a,b+1));
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+const d = s => irnd(1,s);
+const d20 = () => d(20);
+
+// ---------- roster ----------
+const ROSTER = [
+  {id:'duncan', name:'Deadeye Duncan', tag:'The Eternal Underdog',
+   hp:35, atk:2, def:11, dmg:{n:1,s:6,b:0}, speed:3.0, purse:100,
+   color:'#c2a06a', skin:'#d9b38c', weapon:'blaster',
+   intro:'He has never won a match in his life — show some mercy for DEADEYE DUNCAN!',
+   ko:'Duncan yields! The crowd politely pretends to be surprised.',
+   ai:{power:.05, rapid:0, medpacs:0, shields:0}},
+  {id:'gerlon', name:'Gerlon Two-Fingers', tag:'Eight Fingers, Two Blasters',
+   hp:45, atk:4, def:13, dmg:{n:1,s:8,b:0}, speed:2.6, purse:175,
+   color:'#7a9e6b', skin:'#bfa07a', weapon:'blaster',
+   intro:'Down two fingers and still deadly — GERLON TWO-FINGERS!',
+   ko:'Gerlon throws down his blaster and yields!',
+   ai:{power:.2, rapid:.1, medpacs:0, shields:0}},
+  {id:'ice', name:'Ice', tag:'Cold as the Void',
+   hp:55, atk:5, def:14, dmg:{n:1,s:8,b:1}, speed:2.3, purse:275,
+   color:'#7fb6d9', skin:'#e8d5c4', weapon:'blaster',
+   intro:'She never smiles, she never misses twice — the duelist they call ICE!',
+   ko:'Ice yields with a shrug. Somewhere under that frost, respect.',
+   ai:{power:.25, rapid:.15, medpacs:1, shields:0}},
+  {id:'marl', name:'Marl', tag:'The Old Master',
+   hp:70, atk:6, def:15, dmg:{n:1,s:10,b:2}, speed:2.2, purse:425,
+   color:'#b0763f', skin:'#caa284', weapon:'melee',
+   intro:'Out of retirement for one more season — the veteran, MARL!',
+   ko:'Marl lowers his vibroblade and yields. "Good bout, kid."',
+   ai:{power:.35, rapid:.1, medpacs:1, shields:0}},
+  {id:'twitch', name:'Twitch', tag:'Faster Than a Mynock on a Power Line',
+   hp:80, atk:7, def:16, dmg:{n:1,s:8,b:3}, speed:1.8, purse:650,
+   color:'#c95ed9', skin:'#9fd98a', weapon:'blaster',
+   intro:'The reigning champion! The rodian rocket! TWIIIITCH!',
+   ko:'Twitch yields! Ladies and gentlebeings — we have a NEW CHAMPION!',
+   ai:{power:.2, rapid:.4, medpacs:1, shields:1}},
+  {id:'bendak', name:'Bendak Starkiller', tag:'DEATH MATCH — NO YIELDS, NO MERCY',
+   hp:120, atk:9, def:18, dmg:{n:2,s:8,b:3}, speed:1.7, purse:1400,
+   color:'#d9b23f', skin:'#b08560', weapon:'blaster', death:true,
+   intro:'By off-the-books arrangement... an ILLEGAL DEATH MATCH! The retired legend — BENDAK STARKILLER!',
+   ko:'Bendak Starkiller falls. The arena goes silent... then ERUPTS.',
+   ai:{power:.35, rapid:.25, medpacs:2, shields:1, grenade:true}},
+];
+
+// ---------- persistent player ----------
+const SAVE_KEY = 'bendak-arena-save-v1';
+const WEAPONS = [
+  {name:'Standard Blaster', atk:0, dmgB:0, cost:0},
+  {name:'Modded Blaster',   atk:1, dmgB:2, cost:300},
+  {name:'Zaalbar Special',  atk:2, dmgB:4, cost:700},
+];
+const ARMORS = [
+  {name:'Padded Jacket',   def:0, hp:0,  cost:0},
+  {name:'Combat Suit',     def:2, hp:10, cost:250},
+  {name:'Echani Fiber',    def:4, hp:20, cost:600},
+];
+let P = loadSave();
+function freshSave(){ return {rank:0, credits:50, weapon:0, armor:0, medpacs:2, shields:1, champion:false, bendakDown:false}; }
+function loadSave(){
+  try{ const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if(s && typeof s.rank==='number') return s; }catch(e){}
+  return freshSave();
+}
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(P)); }catch(e){} }
+function playerStats(){
+  const w = WEAPONS[P.weapon], a = ARMORS[P.armor];
+  return {name:'The Mysterious Stranger', tag:'Sponsored by Nobody', hp:60+a.hp,
+    atk:4+w.atk, def:13+a.def, dmg:{n:1,s:8,b:w.dmgB}, color:'#e8c558',
+    skin:'#d9b38c', weapon:'blaster'};
+}
+
+// ---------- fight state ----------
+const canvas = $('arena'), ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+let state = 'TITLE';          // TITLE | LADDER | FIGHT | END
+let paused = false;
+let fight = null;             // active duel data
+let fx = {parts:[], floats:[], bolts:[], shake:0, flash:0};
+let queued = null;            // ability queued during pause
+let time = 0;
+
+function mkFighter(base, side, items){
+  return {
+    name:base.name, tag:base.tag, side, x: side<0 ? W*0.30 : W*0.70, y:H*0.66,
+    hp:base.hp, maxHp:base.hp, atk:base.atk, def:base.def, dmg:base.dmg,
+    color:base.color, skin:base.skin, weapon:base.weapon,
+    shieldHp:0, lunge:0, flinch:0, ko:0, bob:rnd(0,6.28),
+    dodgeT:0, gcd:0,
+    medpacs:items.medpacs|0, shields:items.shields|0,
+  };
+}
+
+function startDuel(idx){
+  const foe = ROSTER[idx];
+  const ps = playerStats();
+  fight = {
+    idx, foe,
+    L: mkFighter(ps, -1, {medpacs:P.medpacs, shields:P.shields}),
+    R: mkFighter(foe, 1, foe.ai),
+    aiNext: 1.6, aiGrenadeUsed: false,
+    over:false, countdown:1.4,
+  };
+  fx = {parts:[], floats:[], bolts:[], shake:0, flash:0};
+  queued = null; paused = false;
+  $('log').innerHTML = '';
+  $('nameL').textContent = fight.L.name; $('tagL').textContent = fight.L.tag;
+  $('nameR').textContent = fight.R.name; $('tagR').textContent = fight.R.tag;
+  buildAbilityBar();
+  state = 'FIGHT';
+  $('overlay').classList.add('hidden');
+  log(`<span class="l-ann">"${foe.intro}"</span>`);
+  if(foe.death) log(`<span class="l-sys">DEATH MATCH RULES: no yields. Win or die.</span>`);
+}
+
+// ---------- abilities ----------
+const ABILITIES = [
+  {key:'1', ico:'🔫', lbl:'Blaster', cd:0,  gcd:1.4,
+   can:()=>true,
+   exec(){ playerShot({mod:0, dmgMul:1, label:'Blaster Shot'}); }},
+  {key:'2', ico:'💥', lbl:'Power Blast', cd:6, gcd:1.4,
+   can:()=>true,
+   exec(){ playerShot({mod:-2, dmgMul:2, label:'Power Blast'}); }},
+  {key:'3', ico:'🔁', lbl:'Rapid Shot', cd:8, gcd:1.6,
+   can:()=>true,
+   exec(){ playerShot({mod:-4, dmgMul:1, label:'Rapid Shot'});
+           setTimeout(()=>{ if(state==='FIGHT'&&!fight.over) playerShot({mod:-4, dmgMul:1, label:'Rapid Shot'}); }, 220); }},
+  {key:'4', ico:'🛡️', lbl:'Shield', cd:1, gcd:0.6, count:()=>fight.L.shields,
+   can:()=>fight.L.shields>0 && fight.L.shieldHp<=0,
+   exec(){ const f=fight.L; f.shields--; f.shieldHp=30;
+           log(`<span class="l-sys">Energy shield up — absorbs 30 damage.</span>`);
+           float(f.x, f.y-150, 'SHIELD', '#5ee0ff'); }},
+  {key:'5', ico:'💉', lbl:'Medpac', cd:5, gcd:0.8, count:()=>fight.L.medpacs,
+   can:()=>fight.L.medpacs>0 && fight.L.hp<fight.L.maxHp,
+   exec(){ const f=fight.L; f.medpacs--; const heal=20+d(10);
+           f.hp=clamp(f.hp+heal,0,f.maxHp);
+           log(`<span class="l-sys">Medpac: +${heal} vitality.</span>`);
+           float(f.x, f.y-150, '+'+heal, '#7dff8a'); puff(f.x, f.y-90, '#7dff8a', 14); }},
+  {key:'Q', ico:'🌀', lbl:'Dodge', cd:5, gcd:0.3,
+   can:()=>true,
+   exec(){ const f=fight.L; f.dodgeT=1.5;
+           log(`<span class="l-sys">Dodging — +6 Defense for 1.5s.</span>`);
+           float(f.x, f.y-150, 'DODGE', '#9fc6dd'); }},
+];
+const cds = {};
+function buildAbilityBar(){
+  const bar = $('abilities'); bar.innerHTML='';
+  ABILITIES.forEach((a,i)=>{
+    cds[i]=0;
+    const b=document.createElement('button');
+    b.className='ab'; b.id='ab'+i;
+    b.innerHTML=`<span class="key">${a.key}</span><span class="cnt" id="cnt${i}"></span>
+      <span class="ico">${a.ico}</span><span class="lbl">${a.lbl}</span><div class="cd" id="cd${i}"></div>`;
+    b.onclick=()=>tryAbility(i);
+    bar.appendChild(b);
+  });
+}
+function tryAbility(i){
+  if(state!=='FIGHT' || fight.over || fight.countdown>0) return;
+  const a=ABILITIES[i], f=fight.L;
+  if(cds[i]>0 || f.gcd>0 || !a.can()){ return; }
+  if(paused){ queued=i; log(`<span class="l-sys">Queued: ${a.lbl} (unpause to execute)</span>`); return; }
+  cds[i]=a.cd; f.gcd=a.gcd;
+  a.exec();
+}
+
+// ---------- d20 combat core ----------
+function attackRoll(att, defd, mod, who){
+  const roll=d20();
+  const total=roll+att.atk+mod;
+  const effDef = defd.def + (defd.dodgeT>0?6:0);
+  const crit = roll>=19;
+  const hit = roll===20 || (roll!==1 && total>=effDef);
+  return {roll, total, effDef, hit, crit};
+}
+function rollDmg(f, mul){
+  let v=0; for(let i=0;i<f.dmg.n;i++) v+=d(f.dmg.s);
+  return (v+f.dmg.b)*mul;
+}
+function applyDamage(target, amount, crit){
+  let dealt=amount;
+  if(target.shieldHp>0){
+    const absorbed=Math.min(target.shieldHp, dealt);
+    target.shieldHp-=absorbed; dealt-=absorbed;
+    if(absorbed>0) float(target.x, target.y-170, '-'+absorbed+' shield', '#5ee0ff');
+  }
+  if(dealt>0){
+    target.hp=clamp(target.hp-dealt,0,target.maxHp);
+    target.flinch=0.25;
+    float(target.x+rnd(-20,20), target.y-150, dealt, crit?'#ff5e5e':'#ffd27d', crit);
+    puff(target.x, target.y-90, '#ff8a5e', crit?22:10);
+    fx.shake=Math.min(fx.shake+(crit?14:6), 22);
+  }
+  return dealt;
+}
+
+function playerShot(opt){
+  const A=fight.L, B=fight.R;
+  A.lunge=0.3;
+  const r=attackRoll(A,B,opt.mod,'you');
+  fireBolt(A,B,()=>{
+    if(fight.over) return;
+    if(r.hit){
+      const dmg=applyDamage(B, rollDmg(A,opt.dmgMul), r.crit);
+      log(`<span class="${r.crit?'l-crit':'l-hit'}">${opt.label}: rolled ${r.roll}+${A.atk+opt.mod>=0?'+':''}${A.atk+opt.mod}=${r.total} vs DEF ${r.effDef} — ${r.crit?'CRITICAL! ':''}${dmg} damage.</span>`);
+    } else {
+      log(`<span class="l-miss">${opt.label}: rolled ${r.roll}${fmtMod(A.atk+opt.mod)}=${r.total} vs DEF ${r.effDef} — miss.</span>`);
+      float(B.x, B.y-150, 'MISS', '#7d9bb0');
+    }
+    checkEnd();
+  });
+}
+const fmtMod = m => (m>=0?'+':'')+m;
+
+// ---------- enemy AI ----------
+function aiAct(dt){
+  const f=fight, B=f.R, A=f.L;
+  f.aiNext-=dt;
+  if(f.aiNext>0 || f.over) return;
+  f.aiNext = f.foe.speed * rnd(0.85,1.2);
+  // priorities: heal low, shield mid, grenade once below 50% (bendak), else attack
+  if(B.hp < B.maxHp*0.3 && B.medpacs>0){
+    B.medpacs--; const heal=20+d(10); B.hp=clamp(B.hp+heal,0,B.maxHp);
+    log(`<span class="l-sys">${B.name} slams a medpac: +${heal}.</span>`);
+    float(B.x,B.y-150,'+'+heal,'#7dff8a'); puff(B.x,B.y-90,'#7dff8a',14);
+    return;
+  }
+  if(B.hp < B.maxHp*0.55 && B.shields>0 && B.shieldHp<=0){
+    B.shields--; B.shieldHp=30;
+    log(`<span class="l-sys">${B.name} activates an energy shield!</span>`);
+    float(B.x,B.y-150,'SHIELD','#5ee0ff');
+    return;
+  }
+  if(f.foe.ai.grenade && !f.aiGrenadeUsed && B.hp < B.maxHp*0.5){
+    f.aiGrenadeUsed=true;
+    log(`<span class="l-ann">Bendak pulls a FRAG GRENADE — that's not even legal in a death match!</span>`);
+    B.lunge=0.35;
+    setTimeout(()=>{
+      if(state!=='FIGHT'||fight.over) return;
+      const dmg=applyDamage(A, d(6)+d(6)+4, false);
+      log(`<span class="l-crit">Frag grenade detonates — ${dmg} damage!</span>`);
+      fx.flash=0.5; fx.shake=26;
+      checkEnd();
+    }, 600);
+    return;
+  }
+  // attack choice
+  const p=Math.random(), ai=f.foe.ai;
+  let mod=0, mul=1, label=B.weapon==='melee'?'Vibroblade':'Blaster Shot';
+  if(p<ai.power){ mod=-2; mul=2; label=B.weapon==='melee'?'Power Strike':'Power Blast'; }
+  else if(p<ai.power+ai.rapid){ mod=-4; label='Rapid Shot';
+    setTimeout(()=>{ if(state==='FIGHT'&&!fight.over) enemyAttack(-4,1,'Rapid Shot'); },240); }
+  enemyAttack(mod,mul,label);
+}
+function enemyAttack(mod,mul,label){
+  const A=fight.R, B=fight.L;
+  A.lunge=0.3;
+  const r=attackRoll(A,B,mod,'foe');
+  const land=()=>{
+    if(fight.over) return;
+    if(r.hit){
+      const dmg=applyDamage(B, rollDmg(A,mul), r.crit);
+      log(`<span class="${r.crit?'l-crit':'l-hit'}">${A.name} — ${label}: ${r.roll}${fmtMod(A.atk+mod)}=${r.total} vs DEF ${r.effDef} — ${r.crit?'CRITICAL! ':''}${dmg} damage.</span>`);
+    } else {
+      log(`<span class="l-miss">${A.name} — ${label}: ${r.total} vs DEF ${r.effDef} — miss.</span>`);
+      float(B.x,B.y-150, B.dodgeT>0?'DODGED':'MISS', '#7d9bb0');
+    }
+    checkEnd();
+  };
+  if(A.weapon==='melee'){ A.lunge=0.45; setTimeout(land, 250); }
+  else fireBolt(A,B,land);
+}
+
+function checkEnd(){
+  const f=fight; if(f.over) return;
+  if(f.R.hp<=0){ f.over=true; f.R.ko=0.001; winDuel(); }
+  else if(f.L.hp<=0){ f.over=true; f.L.ko=0.001; loseDuel(); }
+}
+function winDuel(){
+  const foe=f0().foe;
+  log(`<span class="l-ann">"${foe.ko}"</span>`);
+  P.medpacs=fight.L.medpacs; P.shields=fight.L.shields;
+  P.credits+=foe.purse;
+  if(fight.idx===P.rank && P.rank<ROSTER.length) P.rank++;
+  if(foe.id==='twitch') P.champion=true;
+  if(foe.id==='bendak') P.bendakDown=true;
+  save();
+  setTimeout(()=>showResult(true, foe), 2000);
+}
+function loseDuel(){
+  const foe=f0().foe;
+  P.medpacs=fight.L.medpacs; P.shields=fight.L.shields;
+  if(foe.death){ log(`<span class="l-crit">A death match has only one way out...</span>`); }
+  else log(`<span class="l-sys">You yield. The medics drag you out to scattered applause.</span>`);
+  save();
+  setTimeout(()=>showResult(false, foe), 2000);
+}
+const f0=()=>fight;
+
+// ---------- FX ----------
+function log(html){ const e=document.createElement('div'); e.innerHTML=html; $('log').prepend(e);
+  while($('log').children.length>7) $('log').lastChild.remove(); }
+function float(x,y,txt,color,big){ fx.floats.push({x,y,txt:String(txt),color,big,t:0}); }
+function puff(x,y,color,n){ for(let i=0;i<n;i++)
+  fx.parts.push({x,y,vx:rnd(-160,160),vy:rnd(-220,40),t:0,life:rnd(.3,.7),color}); }
+function fireBolt(from,to,onHit){
+  fx.bolts.push({x:from.x+from.side*-40, y:from.y-95, tx:to.x, ty:to.y-95,
+    t:0, dur:0.18, color:from.color, onHit});
+}
+
+// ---------- update ----------
+function update(dt){
+  time+=dt;
+  const f=fight; if(!f) return;
+  if(f.countdown>0){ f.countdown-=dt; if(f.countdown<=0) log(`<span class="l-ann">"FIGHT!"</span>`); return; }
+  if(!f.over){
+    f.L.gcd=Math.max(0,f.L.gcd-dt);
+    f.L.dodgeT=Math.max(0,f.L.dodgeT-dt);
+    for(const k in cds) cds[k]=Math.max(0,cds[k]-dt);
+    aiAct(dt);
+  }
+  for(const c of [f.L,f.R]){
+    c.lunge=Math.max(0,c.lunge-dt);
+    c.flinch=Math.max(0,c.flinch-dt);
+    if(c.ko>0) c.ko=Math.min(1,c.ko+dt*1.6);
+  }
+  // bolts
+  for(let i=fx.bolts.length-1;i>=0;i--){
+    const b=fx.bolts[i]; b.t+=dt;
+    if(b.t>=b.dur){ fx.bolts.splice(i,1); b.onHit&&b.onHit(); }
+  }
+  // particles & floats
+  for(let i=fx.parts.length-1;i>=0;i--){ const p=fx.parts[i]; p.t+=dt;
+    p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=500*dt; if(p.t>p.life) fx.parts.splice(i,1); }
+  for(let i=fx.floats.length-1;i>=0;i--){ const fl=fx.floats[i]; fl.t+=dt;
+    fl.y-=40*dt; if(fl.t>1.1) fx.floats.splice(i,1); }
+  fx.shake=Math.max(0,fx.shake-60*dt);
+  fx.flash=Math.max(0,fx.flash-dt);
+}
+
+// ---------- color utils ----------
+function cRgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+function cLight(h,a=40){const[r,g,b]=cRgb(h);return`rgb(${clamp(r+a,0,255)},${clamp(g+a,0,255)},${clamp(b+a,0,255)})`;}
+function cDark(h,a=50){return cLight(h,-a);}
+function cAlpha(h,al){const[r,g,b]=cRgb(h);return`rgba(${r},${g},${b},${al})`;}
+
+// ---------- render ----------
+function render(){
+  ctx.save();
+  if(fx.shake>0) ctx.translate(rnd(-fx.shake,fx.shake), rnd(-fx.shake,fx.shake));
+  drawArena();
+  if(fight){
+    drawFighter(fight.L);
+    drawFighter(fight.R);
+    drawBolts();
+    drawParticles();
+    drawFloats();
+    if(fight.countdown>0){
+      ctx.save();
+      ctx.textAlign='center';
+      ctx.shadowColor='rgba(232,197,88,0.8)'; ctx.shadowBlur=40;
+      ctx.fillStyle='#e8c558'; ctx.font='800 120px system-ui';
+      ctx.fillText(Math.ceil(fight.countdown*2), W/2, H*0.44);
+      ctx.shadowBlur=0; ctx.restore();
+    }
+  }
+  if(fx.flash>0){ ctx.fillStyle=`rgba(255,220,160,${fx.flash})`; ctx.fillRect(-30,-30,W+60,H+60); }
+  ctx.restore();
+  syncHud();
+}
+function drawArena(){
+  // sky / haze
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'#0a1422'); g.addColorStop(.62,'#101e30'); g.addColorStop(1,'#070d16');
+  ctx.fillStyle=g; ctx.fillRect(-30,-30,W+60,H+60);
+  // crowd stands
+  ctx.fillStyle='#0c1726';
+  ctx.beginPath(); ctx.ellipse(W/2,H*0.43,W*0.55,H*0.30,0,0,7); ctx.fill();
+  let seed=12;
+  const r1=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
+  for(let i=0;i<260;i++){
+    const a=r1()*Math.PI*2, rr=0.62+r1()*0.34;
+    const x=W/2+Math.cos(a)*W*0.52*rr, y=H*0.40+Math.sin(a)*H*0.26*rr;
+    if(y>H*0.52) continue;
+    const tw=Math.sin(time*2+i)*0.5+0.5;
+    ctx.fillStyle=`rgba(${140+tw*60|0},${170+tw*40|0},200,${0.25+tw*0.3})`;
+    ctx.fillRect(x,y,3,3);
+  }
+  // holoboard
+  ctx.fillStyle='rgba(94,224,255,.08)'; ctx.fillRect(W*0.36,H*0.06,W*0.28,H*0.10);
+  ctx.strokeStyle='rgba(94,224,255,.35)'; ctx.strokeRect(W*0.36,H*0.06,W*0.28,H*0.10);
+  ctx.fillStyle='rgba(94,224,255,.85)'; ctx.font='700 26px Segoe UI,system-ui'; ctx.textAlign='center';
+  ctx.fillText(fight && fight.foe.death ? '☠ DEATH MATCH ☠' : 'TARIS DUEL RING', W/2, H*0.125);
+  // ring floor
+  ctx.fillStyle='#15273c';
+  ctx.beginPath(); ctx.ellipse(W/2,H*0.70,W*0.40,H*0.17,0,0,7); ctx.fill();
+  ctx.strokeStyle = fight && fight.foe.death ? 'rgba(255,94,94,.8)' : 'rgba(94,224,255,.7)';
+  ctx.lineWidth=4;
+  ctx.beginPath(); ctx.ellipse(W/2,H*0.70,W*0.40,H*0.17,0,0,7); ctx.stroke();
+  ctx.lineWidth=1;
+  // spotlights
+  for(const sx of [W*0.3,W*0.7]){
+    const sg=ctx.createLinearGradient(sx,0,sx,H*0.75);
+    sg.addColorStop(0,'rgba(220,240,255,.10)'); sg.addColorStop(1,'rgba(220,240,255,0)');
+    ctx.fillStyle=sg;
+    ctx.beginPath(); ctx.moveTo(sx-14,0); ctx.lineTo(sx+14,0);
+    ctx.lineTo(sx+150,H*0.75); ctx.lineTo(sx-150,H*0.75); ctx.closePath(); ctx.fill();
+  }
+}
+function drawFighter(f){
+  const dir=-f.side; // faces opponent
+  const bob=Math.sin(time*2.4+f.bob)*4;
+  const lung=f.lunge>0 ? Math.sin(f.lunge/0.3*Math.PI)*46*dir : 0;
+  const flinchX=f.flinch>0 ? -10*dir : 0;
+  const x=f.x+lung+flinchX, y=f.y+bob;
+  ctx.save();
+  ctx.translate(x,y);
+  if(f.ko>0){ ctx.rotate(dir*-f.ko*Math.PI/2); ctx.translate(0,f.ko*10); ctx.globalAlpha=1-f.ko*0.3; }
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,.45)';
+  ctx.beginPath(); ctx.ellipse(0,8,52,12,0,0,7); ctx.fill();
+  // flash white when hit
+  const hitGlow=f.flinch>0;
+  // legs
+  ctx.strokeStyle=hitGlow?'#fff':'#22384e'; ctx.lineWidth=13; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-10,-58); ctx.lineTo(-16,0); ctx.moveTo(10,-58); ctx.lineTo(16,0); ctx.stroke();
+  // torso
+  ctx.fillStyle=hitGlow?'#fff':f.color;
+  rrect(-22,-128,44,74,12);
+  // belt
+  ctx.fillStyle=hitGlow?'#fff':'#1a2738'; ctx.fillRect(-22,-66,44,9);
+  // head
+  ctx.fillStyle=hitGlow?'#fff':f.skin;
+  ctx.beginPath(); ctx.arc(0,-148,17,0,7); ctx.fill();
+  // visor stripe
+  ctx.fillStyle=hitGlow?'#fff':'rgba(10,20,30,.8)';
+  ctx.fillRect(dir>0?-2:-15,-152,17,6);
+  // weapon arm
+  ctx.strokeStyle=hitGlow?'#fff':f.color; ctx.lineWidth=11;
+  ctx.beginPath(); ctx.moveTo(dir*10,-110); ctx.lineTo(dir*42,-96); ctx.stroke();
+  if(f.weapon==='melee'){
+    ctx.strokeStyle=hitGlow?'#fff':'#cfe6f5'; ctx.lineWidth=6;
+    ctx.beginPath(); ctx.moveTo(dir*42,-96); ctx.lineTo(dir*86,-130); ctx.stroke();
+    ctx.strokeStyle='rgba(94,224,255,.5)'; ctx.lineWidth=10;
+    ctx.beginPath(); ctx.moveTo(dir*46,-99); ctx.lineTo(dir*82,-127); ctx.stroke();
+    ctx.lineWidth=1;
+  } else {
+    ctx.fillStyle=hitGlow?'#fff':'#39516b';
+    ctx.save(); ctx.translate(dir*42,-96); ctx.scale(dir,1);
+    ctx.fillRect(0,-6,26,10); ctx.fillRect(2,4,8,10);
+    ctx.restore();
+  }
+  // off arm
+  ctx.strokeStyle=hitGlow?'#fff':f.color; ctx.lineWidth=11;
+  ctx.beginPath(); ctx.moveTo(dir*-12,-110); ctx.lineTo(dir*-26,-78); ctx.stroke();
+  // shield bubble
+  if(f.shieldHp>0){
+    ctx.strokeStyle=`rgba(94,224,255,${0.35+Math.sin(time*6)*0.15})`;
+    ctx.lineWidth=3;
+    ctx.beginPath(); ctx.ellipse(0,-80,62,92,0,0,7); ctx.stroke();
+    ctx.lineWidth=1;
+  }
+  // dodge afterimage
+  if(f.dodgeT>0){ ctx.globalAlpha=0.25;
+    ctx.strokeStyle='#9fc6dd'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.ellipse(dir*-18,-80,40,80,0,0,7); ctx.stroke();
+    ctx.globalAlpha=1; ctx.lineWidth=1; }
+  ctx.restore();
+}
+function rrect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill();
+}
+function drawBolts(){
+  for(const b of fx.bolts){
+    const k=b.t/b.dur;
+    const x=b.x+(b.tx-b.x)*k, y=b.y+(b.ty-b.y)*k;
+    const x2=b.x+(b.tx-b.x)*Math.max(0,k-0.14), y2=b.y+(b.ty-b.y)*Math.max(0,k-0.14);
+    ctx.strokeStyle='#ff6a4a'; ctx.lineWidth=5; ctx.lineCap='round';
+    ctx.shadowColor='#ff6a4a'; ctx.shadowBlur=14;
+    ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x,y); ctx.stroke();
+    ctx.shadowBlur=0; ctx.lineWidth=1;
+  }
+}
+function drawParticles(){
+  for(const p of fx.parts){
+    ctx.globalAlpha=1-p.t/p.life;
+    ctx.fillStyle=p.color;
+    ctx.fillRect(p.x-2,p.y-2,4,4);
+  }
+  ctx.globalAlpha=1;
+}
+function drawFloats(){
+  ctx.textAlign='center';
+  for(const fl of fx.floats){
+    ctx.globalAlpha=clamp(1.3-fl.t,0,1);
+    ctx.font=(fl.big?'800 44px':'700 28px')+' Segoe UI,system-ui';
+    ctx.fillStyle=fl.color;
+    ctx.shadowColor='#000'; ctx.shadowBlur=6;
+    ctx.fillText(fl.txt, fl.x, fl.y);
+    ctx.shadowBlur=0;
+  }
+  ctx.globalAlpha=1;
+}
+function syncHud(){
+  if(!fight) return;
+  const L=fight.L, R=fight.R;
+  setBar('hpL','shL','numL',L); setBar('hpR','shR','numR',R);
+  ABILITIES.forEach((a,i)=>{
+    const btn=$('ab'+i); if(!btn) return;
+    const frac = a.cd>0 ? cds[i]/a.cd : 0;
+    $('cd'+i).style.height=(Math.max(frac, fight.L.gcd>0?0.001:0)*100)+'%';
+    const cnt=$('cnt'+i);
+    if(a.count) cnt.textContent='×'+a.count();
+    btn.classList.toggle('disabled', !a.can()||fight.over||fight.countdown>0);
+    btn.style.borderColor = queued===i ? '#e8c558' : '';
+  });
+}
+function setBar(hp,sh,num,f){
+  $(hp).style.width=(f.hp/f.maxHp*100)+'%';
+  $(hp).classList.toggle('ok', f.hp/f.maxHp>0.35);
+  $(sh).style.width=(clamp(f.shieldHp/30,0,1)*100)+'%';
+  $(num).textContent=`${f.hp} / ${f.maxHp}`+(f.shieldHp>0?`  ⛨${f.shieldHp}`:'');
+}
+
+// ---------- screens ----------
+function show(html){ $('screen').innerHTML=html; $('overlay').classList.remove('hidden'); }
+function showTitle(){
+  state='TITLE';
+  show(`
+    <h2>UPPER CITY CANTINA · TARIS</h2>
+    <h1>DUELING ARENA</h1>
+    <div class="sub">Climb the ranks of the Taris duel ring. Win credits, buy gear,
+    take the champion's seat — then face the retired legend <b>Bendak Starkiller</b>
+    in an illegal death match.<br><br>
+    A modernized fan homage to the KOTOR mini-game. d20 rolls under the hood,
+    real-time on the surface.</div>
+    <button class="btn" onclick="showLadder()">ENTER THE RING</button>
+    ${P.rank>0?'<button class="btn danger" onclick="wipeSave()">RESET CAREER</button>':''}
+    <div class="hint"><kbd>1</kbd>–<kbd>5</kbd> abilities · <kbd>Q</kbd> dodge ·
+    <kbd>SPACE</kbd> tactical pause (queue an action while frozen, just like the old days)</div>
+  `);
+}
+function wipeSave(){ P=freshSave(); save(); showTitle(); }
+function showLadder(){
+  state='LADDER';
+  const ps=playerStats();
+  let rungs='';
+  ROSTER.forEach((r,i)=>{
+    const unlocked = i<=P.rank || (r.death && P.champion);
+    const beaten = i<P.rank || (r.death && P.bendakDown);
+    const cls = r.death?'rung death':'rung';
+    rungs+=`<div class="${cls} ${beaten?'done':(unlocked?'':'locked')}">
+      <div class="face" style="background:${r.color}"></div>
+      <div class="rinfo"><div class="rname">${r.name}${beaten?' ✓':''}</div>
+        <div class="rtag">${r.tag}</div></div>
+      <div class="rpay">${r.purse} cr</div>
+      <button class="btn" ${unlocked?'':'disabled'}
+        onclick="startDuel(${i})">${beaten?'REMATCH':'FIGHT'}</button>
+    </div>`;
+  });
+  show(`
+    <h2>${P.bendakDown?'LEGEND OF THE RING':(P.champion?'CHAMPION':'CHALLENGER')}</h2>
+    <h1 style="font-size:clamp(20px,3vw,38px)">THE LADDER</h1>
+    <div class="credits">💰 ${P.credits} credits</div>
+    <div class="stats">ATK +${ps.atk} · DEF ${ps.def} · VIT ${ps.hp} ·
+      ${WEAPONS[P.weapon].name} · ${ARMORS[P.armor].name} ·
+      💉×${P.medpacs} 🛡×${P.shields}</div>
+    <div class="ladder">${rungs}</div>
+    <div class="shop">
+      ${shopBtn('weapon')}
+      ${shopBtn('armor')}
+      <div class="shopitem">💉 Medpac — <b>50 cr</b><br>
+        <button class="btn" style="padding:.3em 1em;margin-top:.4em"
+          ${P.credits>=50?'':'disabled'} onclick="buy('medpac')">BUY</button></div>
+      <div class="shopitem">🛡 Energy Shield — <b>80 cr</b><br>
+        <button class="btn" style="padding:.3em 1em;margin-top:.4em"
+          ${P.credits>=80?'':'disabled'} onclick="buy('shield')">BUY</button></div>
+    </div>
+    <button class="btn" onclick="showTitle()">BACK</button>
+  `);
+}
+function shopBtn(kind){
+  const list = kind==='weapon'?WEAPONS:ARMORS;
+  const cur = kind==='weapon'?P.weapon:P.armor;
+  if(cur>=list.length-1)
+    return `<div class="shopitem">${kind==='weapon'?'🔫':'🦺'} ${list[cur].name}<br><b>MAXED</b></div>`;
+  const nxt=list[cur+1];
+  return `<div class="shopitem">${kind==='weapon'?'🔫':'🦺'} ${nxt.name} — <b>${nxt.cost} cr</b><br>
+    <button class="btn" style="padding:.3em 1em;margin-top:.4em"
+      ${P.credits>=nxt.cost?'':'disabled'} onclick="buy('${kind}')">UPGRADE</button></div>`;
+}
+function buy(what){
+  if(what==='medpac' && P.credits>=50){ P.credits-=50; P.medpacs++; }
+  if(what==='shield' && P.credits>=80){ P.credits-=80; P.shields++; }
+  if(what==='weapon' && P.weapon<WEAPONS.length-1 && P.credits>=WEAPONS[P.weapon+1].cost){
+    P.credits-=WEAPONS[P.weapon+1].cost; P.weapon++; }
+  if(what==='armor' && P.armor<ARMORS.length-1 && P.credits>=ARMORS[P.armor+1].cost){
+    P.credits-=ARMORS[P.armor+1].cost; P.armor++; }
+  save(); showLadder();
+}
+function showResult(won, foe){
+  state='END';
+  if(won){
+    const special = foe.id==='bendak'
+      ? `<div class="sub">The crowd chants a name they don't know.
+         Bendak Starkiller — the legend who never lost — is down for good.
+         The ring is yours. Forever.<br><br>🏆 <b>YOU ARE THE LEGEND OF TARIS.</b></div>`
+      : foe.id==='twitch'
+      ? `<div class="sub">The champion falls! As the new title-holder, a shady promoter
+         slides up to you... a certain retired duelist wants one last match.
+         Off the books. To the death. <b>Bendak Starkiller awaits.</b></div>`
+      : `<div class="sub">Victory! The purse is yours, and the next rung beckons.</div>`;
+    show(`<h2>VICTORY</h2><h1 style="font-size:clamp(22px,3.4vw,44px)">${foe.name} DEFEATED</h1>
+      ${special}
+      <div class="credits">+${foe.purse} credits</div><br>
+      <button class="btn" onclick="showLadder()">CONTINUE</button>`);
+  } else {
+    show(`<h2>${foe.death?'DEATH MATCH':'DEFEAT'}</h2>
+      <h1 style="font-size:clamp(22px,3.4vw,44px)">${foe.death?'YOU DIED':'YOU YIELD'}</h1>
+      <div class="sub">${foe.death
+        ? 'In the holos, the hero always wins. This is not the holos. (Fine — the medics had a miracle on hand. One more try?)'
+        : 'The crowd boos. The medics shrug. Train up and try again.'}</div>
+      <button class="btn" onclick="startDuel(${fight.idx})">REMATCH</button>
+      <button class="btn" onclick="showLadder()">LADDER</button>`);
+  }
+}
+
+// ---------- input ----------
+addEventListener('keydown', e=>{
+  if(state!=='FIGHT') return;
+  if(e.code==='Space'){ e.preventDefault(); togglePause(); return; }
+  const k=e.key.toUpperCase();
+  const i=ABILITIES.findIndex(a=>a.key===k);
+  if(i>=0) tryAbility(i);
+});
+function togglePause(){
+  if(fight.over||fight.countdown>0) return;
+  paused=!paused;
+  $('pauseBanner').style.display=paused?'flex':'none';
+  if(!paused && queued!==null){ const q=queued; queued=null; tryAbility(q); }
+}
+
+// ---------- main loop ----------
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(state==='FIGHT' && !paused) update(dt);
+  else time+=dt*0.3; // keep crowd shimmering on menus
+  if(state==='FIGHT'||state==='END') render();
+  requestAnimationFrame(frame);
+}
+showTitle();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
