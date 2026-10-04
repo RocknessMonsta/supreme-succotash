@@ -69,6 +69,7 @@ struct RepsBadge: View {
 }
 
 /// Weight-sync state with the Apple Watch, shown subtly.
+@MainActor
 struct WatchStatusLabel: View {
     @Environment(AppModel.self) private var model
 
