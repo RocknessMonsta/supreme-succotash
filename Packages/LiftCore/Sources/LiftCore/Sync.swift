@@ -249,6 +249,12 @@ public enum SyncReducer {
 
     static func applyRemoteSession(_ remote: WorkoutSession, to state: inout AppState, role: DeviceKind) -> SyncEffects {
         var fx = SyncEffects()
+        // Snapshots sent before a unit switch are converted so merges compare like with like.
+        let remote = remote.converted(to: state.settings.unit, settings: state.settings)
+        if let local = state.activeSession, local.unit != state.settings.unit {
+            state.activeSession = local.converted(to: state.settings.unit, settings: state.settings)
+            fx.stateChanged = true
+        }
         if state.isTombstoned(remote.id) {
             fx.sendContext = role == .phone
             return fx
@@ -270,6 +276,7 @@ public enum SyncReducer {
             resolved = SessionMerge.resolveConflict(local, remote)
             let loser = resolved.id == local.id ? remote.id : local.id
             state.addTombstone(loser)
+            fx.stateChanged = true  // the tombstone must be persisted even if the active session is unchanged
             if role == .phone { fx.sendContext = true }
         }
         if resolved != local {
@@ -283,7 +290,6 @@ public enum SyncReducer {
     static func applyContext(_ context: WatchContext, to state: inout AppState) -> SyncEffects {
         var fx = SyncEffects()
         let before = state
-        let local = state.activeSession
 
         state.program = context.program
         state.settings = context.settings
@@ -302,19 +308,26 @@ public enum SyncReducer {
             state.applyCompleted(workout)
         }
 
+        // A local session that the phone finished or that is tombstoned is over, even if the context
+        // also offers a different active session (which must then win rather than be merged/resolved).
+        var local = state.activeSession?.converted(to: state.settings.unit, settings: state.settings)
+        state.activeSession = local
+        if let mine = local, state.isTombstoned(mine.id) || phoneIDs.contains(mine.id) {
+            state.activeSession = nil
+            local = nil
+            fx.activeSessionEndedRemotely = true
+        }
+
         switch (local, context.activeSession) {
         case (nil, nil):
             break
         case (nil, let remote?):
-            if !state.isTombstoned(remote.id) && !state.hasHistory(id: remote.id) { state.activeSession = remote }
-        case (let mine?, nil):
-            if state.isTombstoned(mine.id) || phoneIDs.contains(mine.id) {
-                state.activeSession = nil
-                fx.activeSessionEndedRemotely = true
-            } else {
-                // Started on the watch while apart, or the phone hasn't received it yet.
-                fx.sendSession = mine
+            if !state.isTombstoned(remote.id) && !state.hasHistory(id: remote.id) {
+                state.activeSession = remote.converted(to: state.settings.unit, settings: state.settings)
             }
+        case (let mine?, nil):
+            // Started on the watch while apart, or the phone hasn't received it yet.
+            fx.sendSession = mine
         case (let mine?, let remote?):
             var sub = state
             sub.activeSession = mine

@@ -18,7 +18,12 @@ public enum ProgressionEngine {
         guard result.wasAttempted else { return .unchanged }
         let equipment = slot.exercise.equipment
         if result.isSuccess {
-            slot.nextWeight = Weight.loadable(result.weight + slot.increment, equipment: equipment, settings: settings)
+            var next = Weight.loadable(result.weight + slot.increment, equipment: equipment, settings: settings)
+            if next <= result.weight {
+                // Increment smaller than the smallest loadable jump: take the smallest real jump instead.
+                next = Weight.loadable(result.weight + smallestStep(for: equipment, settings: settings), equipment: equipment, settings: settings)
+            }
+            slot.nextWeight = next
             slot.consecutiveFailures = 0
             return .increased
         }
@@ -30,6 +35,16 @@ public enum ProgressionEngine {
         }
         slot.nextWeight = result.weight
         return .repeated
+    }
+
+    /// The smallest weight change the equipment can actually make.
+    public static func smallestStep(for equipment: Equipment, settings: Settings) -> Double {
+        switch equipment {
+        case .barbell: return 2 * (settings.availablePlates.filter { $0 > 0 }.min() ?? 1.25)
+        case .dumbbell: return max(settings.dumbbellIncrement, 0.5)
+        case .cable, .machine: return settings.unit == .lb ? 2.5 : 1
+        case .bodyweight: return 0
+        }
     }
 
     /// 10% off, rounded down to the slot increment, clamped to the equipment minimum.

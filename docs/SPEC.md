@@ -120,3 +120,18 @@ App/Watch/                      watchOS SwiftUI app
   session merge, unit conversion, stats, CSV.
 - App code must compile under Xcode 16 for iOS 17 / watchOS 10 (it cannot be compiled in CI here,
   so code is written conservatively and reviewed).
+
+## 4. LiftCore API additions
+
+- `ExerciseLibrary.all`, `.exercise(id:)`, `.exercises(for:)` — 49 built-in exercises, kebab-case ids.
+- `ProgramDefaults.defaultIncrement(for:unit:)`, `.startingWeight(for:unit:)`, `.makeSlot(for:unit:)`, `.program(unit:)`
+  (5-day default rotation). Barbell lifts always use the barbell increment, even isolation ones like curls.
+- `AppState.convertUnits(to:)` — converts settings (reset to unit defaults, non-weight settings kept), slots
+  (next weight made loadable, increment reset to default), history and the active session.
+- `Program` editing: `moveDay(fromOffsets:toOffset:)`, `setDayEnabled(_:_:)`, `replaceExercise(slotID:with:unit:)`,
+  `setNextWeight(slotID:weight:)`, `setIncrement(slotID:increment:)`, `setNextDay(_:)`.
+- `Stats.estimatedOneRepMax(weight:reps:)`, `.series(for:in:)` (`Stats.WeightPoint`), `.personalRecords(in:)`
+  (`Stats.PersonalRecord`), `.totalVolume(in:)`, `.workoutsThisWeek(in:now:calendar:)`, `.currentStreakWeeks(in:now:calendar:)`.
+  Dates are each workout's `finishedAt`.
+- `CSVExporter.csv(for:)` — one row per exercise result, oldest first, ISO8601 UTC dates.
+- `AppStateStore(url:)`, `.defaultURL(fileName:)`, `.load()`, `.save(_:)` — atomic JSON; a corrupt file is moved to `<name>.corrupt`.
