@@ -10,6 +10,11 @@ struct SetCircleView: View {
 
     private var isHit: Bool { (reps ?? -1) >= target }
 
+    private var accessibilityText: String {
+        guard let reps else { return "Not logged" }
+        return "\(reps) reps"
+    }
+
     var body: some View {
         ZStack {
             if let reps {
@@ -23,6 +28,6 @@ struct SetCircleView: View {
         }
         .frame(width: size, height: size)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(reps.map { "\($0) reps" } ?? "Not logged")
+        .accessibilityLabel(accessibilityText)
     }
 }

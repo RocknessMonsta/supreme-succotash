@@ -24,7 +24,7 @@ struct WorkoutDoneView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                Text("\(hits)/\(attempted) exercises hit 4\u{00D7}8")
+                Text("\(hits)/\(attempted) exercises hit target")
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.secondary)
                 Button(action: onDone) {
