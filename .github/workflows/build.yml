@@ -1,0 +1,60 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-tests:
+    name: LiftCore tests
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run unit tests
+        working-directory: Packages/LiftCore
+        run: swift test
+
+  apps:
+    name: iOS + watchOS build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Xcode version
+        run: xcodebuild -version
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        run: xcodegen generate
+      - name: Build iPhone app (includes embedded Watch app)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Lift48.xcodeproj \
+            -scheme Lift48 \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee ios-build.log
+      - name: Build Watch app on its own
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Lift48.xcodeproj \
+            -scheme Lift48Watch \
+            -destination 'generic/platform=watchOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            2>&1 | tee watch-build.log
+      - name: Summarize compiler errors
+        if: failure()
+        run: |
+          for f in ios-build.log watch-build.log; do
+            [ -f "$f" ] || continue
+            echo "=== $f ==="
+            grep -E "error:|warning: .*will be an error" "$f" | sort -u | head -100 || true
+          done
