@@ -1,0 +1,101 @@
+name: Lift48
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+    watchOS: "10.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Set your Apple Developer team here (or in Xcode > Signing & Capabilities) to run on devices.
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+packages:
+  LiftCore:
+    path: Packages/LiftCore
+targets:
+  Lift48:
+    type: application
+    platform: iOS
+    sources:
+      - path: App/iOS
+      - path: App/Shared
+    dependencies:
+      - package: LiftCore
+      - target: Lift48Watch
+    entitlements:
+      path: App/iOS/Lift48.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+    info:
+      path: App/iOS/Info.plist
+      properties:
+        CFBundleDisplayName: Lift48
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSHealthShareUsageDescription: Lift48 reads heart rate and energy to show them alongside your workouts.
+        NSHealthUpdateUsageDescription: Lift48 saves your strength workouts to Apple Health.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.lift48
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+  Lift48Watch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: App/Watch
+      - path: App/Shared
+    dependencies:
+      - package: LiftCore
+    entitlements:
+      path: App/Watch/Lift48Watch.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
+    info:
+      path: App/Watch/Info.plist
+      properties:
+        CFBundleDisplayName: Lift48
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: com.example.lift48
+        WKBackgroundModes:
+          - workout-processing
+        NSHealthShareUsageDescription: Lift48 reads heart rate and energy during your workout.
+        NSHealthUpdateUsageDescription: Lift48 saves your strength workouts to Apple Health.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.lift48.watchkitapp
+        TARGETED_DEVICE_FAMILY: "4"
+        SKIP_INSTALL: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+schemes:
+  Lift48:
+    build:
+      targets:
+        Lift48: all
+        Lift48Watch: all
+    run:
+      config: Debug
+    archive:
+      config: Release
+  Lift48Watch:
+    build:
+      targets:
+        Lift48Watch: all
+    run:
+      config: Debug
