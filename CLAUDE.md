@@ -23,26 +23,20 @@ This document provides comprehensive guidance for AI assistants working with thi
 ## Project Overview
 
 ### Purpose
-*[To be filled in: Describe what this project does and its main objectives]*
+Lift48 is a StrongLifts-style strength tracker for iPhone and Apple Watch, built around
+**4 sets × 8 reps** and a **body-part split** (Chest, Back, Shoulders, Legs, Arms; 3 exercises each).
+Product rules live in `docs/SPEC.md`; the UI-facing API is in `docs/APP_MODEL_API.md`.
 
 ### Technology Stack
-*[To be filled in as technologies are added]*
-
-**Languages:**
-- TBD
-
-**Frameworks & Libraries:**
-- TBD
-
-**Development Tools:**
-- Git (version control)
-- TBD
-
-**Infrastructure:**
-- TBD
+- **Languages:** Swift (SWIFT_VERSION 5 mode in Xcode; LiftCore builds with Swift 6.1)
+- **Frameworks:** SwiftUI, Observation, Swift Charts, WatchConnectivity, HealthKit, UserNotifications
+- **Targets:** iOS 17+, watchOS 10+
+- **Tools:** XcodeGen (`project.yml`), Swift Package Manager. No third-party dependencies.
 
 ### Key Features
-*[To be filled in: List main features and capabilities]*
+Tap-to-log sets, auto progression with 3-strike 10% deload, auto rest timer (90/180/300 s),
+warm-ups, plate calculator, history, progress charts, CSV export, program editor,
+Apple Watch app with phone⇄watch sync, Apple Health.
 
 ---
 
@@ -50,32 +44,19 @@ This document provides comprehensive guidance for AI assistants working with thi
 
 ```
 supreme-succotash/
-├── .git/                 # Git version control
-└── CLAUDE.md            # This file - AI assistant guide
+├── project.yml              # XcodeGen spec (iOS app embeds the watchOS app)
+├── Packages/LiftCore/       # Pure Swift logic + XCTest suite (Foundation only, Linux-safe)
+├── App/Shared/              # AppModel, WatchSyncCoordinator, HealthKit, notifications, haptics
+├── App/iOS/                 # iPhone SwiftUI app (Views/Workout, History, Progress, Settings)
+├── App/Watch/               # watchOS SwiftUI app
+└── docs/                    # SPEC.md, APP_MODEL_API.md
 ```
 
-*[To be updated as the project structure develops]*
-
-### Key Directories
-
-*[To be filled in as directories are created]*
-
-**Examples:**
-- `/src/` - Source code
-- `/tests/` - Test files
-- `/docs/` - Documentation
-- `/scripts/` - Build and utility scripts
-- `/config/` - Configuration files
-
-### Important Files
-
-*[To be filled in as key files are added]*
-
-**Examples:**
-- `package.json` / `requirements.txt` / `Cargo.toml` - Dependencies
-- `README.md` - Project documentation
-- `.gitignore` - Git ignore rules
-- Configuration files (`.eslintrc`, `tsconfig.json`, etc.)
+### Key rules
+- All non-trivial logic belongs in `LiftCore` and must be unit-tested. It must not import Apple-only frameworks.
+- Views mutate state only through `AppModel` intents.
+- The iPhone is authoritative for program, settings and history. Live sessions merge per field (see SPEC §2.1).
+- The rest timer is an absolute `endsAt` date. Never keep a separate countdown.
 
 ---
 
@@ -181,14 +162,12 @@ cd supreme-succotash
 
 ### Running Tests
 
-*[To be filled in with test commands]*
-
 ```bash
-# Example test commands
-# npm test
-# pytest
-# cargo test
+cd Packages/LiftCore && swift test
+# Without a local toolchain (e.g. Linux sandbox):
+docker run --rm -v "$PWD/Packages/LiftCore:/pkg" -w /pkg swift:6.1 swift test
 ```
+App targets need Xcode on a Mac: `xcodegen generate && open Lift48.xcodeproj`.
 
 ### Test Coverage
 
@@ -385,6 +364,7 @@ Always check for these common vulnerabilities:
 | Date | Changes | Updated By |
 |------|---------|------------|
 | 2026-01-06 | Initial creation - comprehensive template | Claude AI |
+| 2026-10-04 | Filled in Lift48 overview, structure and test commands | Claude AI |
 
 ---
 

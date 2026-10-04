@@ -71,7 +71,7 @@ struct WeightEditorSheet: View {
             Button {
                 adjust(by: -step)
             } label: {
-                Image(systemName: "minus.circle.fill").font(.system(.largeTitle))
+                Image(systemName: "minus.circle.fill").font(.largeTitle)
             }
             .buttonStyle(.borderless)
             .accessibilityLabel("Decrease weight")
@@ -90,7 +90,7 @@ struct WeightEditorSheet: View {
             Button {
                 adjust(by: step)
             } label: {
-                Image(systemName: "plus.circle.fill").font(.system(.largeTitle))
+                Image(systemName: "plus.circle.fill").font(.largeTitle)
             }
             .buttonStyle(.borderless)
             .accessibilityLabel("Increase weight")

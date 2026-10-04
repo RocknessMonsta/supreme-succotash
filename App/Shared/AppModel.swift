@@ -182,12 +182,15 @@ final class AppModel {
     // MARK: Program, settings, history (phone is authoritative; the Watch UI doesn't edit these)
 
     func updateSettings(_ change: (inout Settings) -> Void) {
+        // Mutate a copy so the closure may safely read the model (no overlapping access to `state`).
         let oldUnit = state.settings.unit
-        change(&state.settings)
-        if state.settings.unit != oldUnit {
+        var settings = state.settings
+        change(&settings)
+        let target = settings.unit
+        settings.unit = oldUnit
+        state.settings = settings
+        if target != oldUnit {
             // Route unit switches through the converter so every stored weight follows.
-            let target = state.settings.unit
-            state.settings.unit = oldUnit
             state.convertUnits(to: target)
             if let session = state.activeSession { sync?.send(.session(session)) }
         }
@@ -200,7 +203,9 @@ final class AppModel {
     }
 
     func updateProgram(_ change: (inout Program) -> Void) {
-        change(&state.program)
+        var program = state.program
+        change(&program)
+        state.program = program
         programOrSettingsChanged()
     }
 
